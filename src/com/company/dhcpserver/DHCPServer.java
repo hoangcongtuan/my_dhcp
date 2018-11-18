@@ -26,33 +26,8 @@ public class DHCPServer {
             boolean listening = true;
             while (listening) {
                 socket.receive(p); //throws i/o exception
-//                System.out.println("Connection established from " + p.getAddress());
                 byte[] msg = p.getData();
                 DHCPMessage dhcpMessage = new DHCPMessage(msg);
-
-                byte hardwareLenght = dhcpMessage.getHLen();
-                byte[] macAdress = new byte[hardwareLenght];
-
-                for(int i = 0; i < hardwareLenght; i++) {
-                    macAdress[i] = msg[28 + i];
-                }
-
-                System.out.print("Mac Address: ");
-                for (int i = 0; i < macAdress.length; i++) {
-                    System.out.format("%02X%s", macAdress[i], (i < macAdress.length - 1) ? ":"
-                            : "");
-                }
-                System.out.println();
-
-                int clientPort = p.getPort();
-
-                String sendStr = "Server Reply";
-//                DatagramPacket packet = new DatagramPacket(sendStr.getBytes(), sendStr.getBytes().length, )
-                List<InetAddress> inetAddressList = NetworkUtils.listAllBroadcastAddresses();
-                for(InetAddress inetAddress : inetAddressList) {
-                    broadcast(sendStr, inetAddress, clientPort);
-                }
-
                 System.out.println("Data Received: " + new String(p.getData()).trim());
             }
             socket.close();
