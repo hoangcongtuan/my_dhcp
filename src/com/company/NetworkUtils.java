@@ -3,6 +3,7 @@ package com.company;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -26,5 +27,53 @@ public class NetworkUtils {
                     .forEach(broadcastList::add);
         }
         return broadcastList;
+    }
+
+    public static byte[] getMacAddress() {
+        byte[] mac = null;
+        try {
+            InetAddress address = InetAddress.getLocalHost();
+
+            /*
+             * Get NetworkInterface for the current host and then read the
+             * hardware address.
+             */
+            NetworkInterface ni = NetworkInterface.getByInetAddress(address);
+            mac = ni.getHardwareAddress();
+
+
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        assert(mac != null);
+        return mac;
+    }
+
+    public static void printMacAddress() {
+        try {
+            InetAddress address = InetAddress.getLocalHost();
+
+            /*
+             * Get NetworkInterface for the current host and then read the
+             * hardware address.
+             */
+            NetworkInterface ni = NetworkInterface.getByInetAddress(address);
+            byte[] mac = ni.getHardwareAddress();
+
+            /*
+             * Extract each array of mac address and convert it to hexa with the
+             * . * following format 08-00-27-DC-4A-9E.
+             */
+            for (int i = 0; i < mac.length; i++) {
+                System.out.format("%02X%s", mac[i], (i < mac.length - 1) ? ":"
+                        : "");
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -1,6 +1,8 @@
 package com.company.dhcpclient;
 
 import com.company.NetworkUtils;
+import com.company.common.DHCPMessage;
+import com.company.dhcpserver.DHCPServer;
 
 import java.io.IOException;
 import java.net.*;
@@ -10,17 +12,12 @@ import java.util.List;
 public class DHCPClient {
 
     private static final int MAX_BUFFER_SIZE = 1024; // 1024 bytes
-    private int listenPort =  1338;//1338;
-    private int serverPort =  1337;//1337;
+    public final static int CLIENT_PORT =  1668;//68;
     private DatagramSocket socket;
 
-    /*
-     * public DHCPClient(int servePort) { listenPort = servePort; new
-     * DHCPServer(); }
-     */
 
     public DHCPClient() throws SocketException {
-
+        socket = new DatagramSocket();
     }
 
     /**
@@ -28,79 +25,42 @@ public class DHCPClient {
      */
     public static void main(String[] args) {
         DHCPClient client;
-        /*
-         * if (args.length >= 1) { server = new
-         * DHCPClient(Integer.parseInt(args[0])); } else {
-         */
         try {
+            DHCPMessage discoveryMsg = new DHCPMessage();
+            byte[] data = discoveryMsg.discoverMsg(NetworkUtils.getMacAddress());
             client = new DHCPClient();
             List<InetAddress> brList = NetworkUtils.listAllBroadcastAddresses();
             for(InetAddress inetAddress: brList) {
-                client.broadcast("Hello", inetAddress);
+                client.broadcast(data, inetAddress);
             }
+
+            byte[] reData = new byte[MAX_BUFFER_SIZE];
+            Arrays.fill(reData, (byte) 0);
+            DatagramPacket p = new DatagramPacket(reData, MAX_BUFFER_SIZE);
+            client.socket.receive(p);
+            System.out.println("Server: " + new String(p.getData()).trim());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void broadcast(
+    private void broadcast(
             String broadcastMessage, InetAddress address) throws IOException {
-        socket = new DatagramSocket();
         socket.setBroadcast(true);
 
         byte[] buffer = broadcastMessage.getBytes();
 
         DatagramPacket packet
-                = new DatagramPacket(buffer, buffer.length, address, serverPort);
+                = new DatagramPacket(buffer, buffer.length, address, DHCPServer.SERVER_PORT);
         socket.send(packet);
-        socket.close();
     }
 
-    public static byte[] getMacAddress() {
-        byte[] mac = null;
-        try {
-            InetAddress address = InetAddress.getLocalHost();
+    private void broadcast(
+            byte[] buffer, InetAddress address) throws IOException {
+        socket.setBroadcast(true);
 
-            /*
-             * Get NetworkInterface for the current host and then read the
-             * hardware address.
-             */
-            NetworkInterface ni = NetworkInterface.getByInetAddress(address);
-            mac = ni.getHardwareAddress();
-
-
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-        assert(mac != null);
-        return mac;
-    }
-
-    public static void printMacAddress() {
-        try {
-            InetAddress address = InetAddress.getLocalHost();
-
-            /*
-             * Get NetworkInterface for the current host and then read the
-             * hardware address.
-             */
-            NetworkInterface ni = NetworkInterface.getByInetAddress(address);
-            byte[] mac = ni.getHardwareAddress();
-
-            /*
-             * Extract each array of mac address and convert it to hexa with the
-             * . * following format 08-00-27-DC-4A-9E.
-             */
-            for (int i = 0; i < mac.length; i++) {
-                System.out.format("%02X%s", mac[i], (i < mac.length - 1) ? ":"
-                        : "");
-            }
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
+        DatagramPacket packet
+                = new DatagramPacket(buffer, buffer.length, address, DHCPServer.SERVER_PORT);
+        socket.send(packet);
     }
 }
