@@ -1,6 +1,7 @@
 package com.company.common;
 
-import java.lang.reflect.Array;
+import com.company.Utils;
+
 import java.util.Arrays;
 
 public class DHCPMessage {
@@ -76,7 +77,7 @@ public class DHCPMessage {
         file = new byte[128];
         options = new DHCPOptions();
 
-        this.printMessage();
+//        this.printMessage();
     }
 
     public DHCPMessage(byte[] data) {
@@ -108,10 +109,10 @@ public class DHCPMessage {
 
         this.options = new DHCPOptions(Arrays.copyOfRange(data, 236, data.length - 1));
 
-        this.printMessage();
+//        this.printMessage();
     }
 
-    public byte[] discoverMsg(byte[] cMacAddress) {
+    public byte[] discoverMsg(byte[] cMacAddress, byte[] hostName) {
         op = DHCPREQUEST;
         hType = ETHERNET10MB; // (0x1) 10Mb Ethernet
         hLen = 6; // (0x6)
@@ -126,19 +127,21 @@ public class DHCPMessage {
         Arrays.fill(sIAddr, (byte) 0);
         Arrays.fill(gIAddr, (byte) 0);
         Arrays.fill(cHAddr, (byte) 0);
-        for(int i = 0; i < cMacAddress.length; i++)
-            cHAddr[i] = cMacAddress[i];
+        System.arraycopy(cMacAddress, 0, cHAddr, 0, cMacAddress.length);
 
-        System.out.print("MAC Address: ");
-        for (int i = 0; i < cHAddr.length; i++) {
-            System.out.format("%02X%s", cHAddr[i], (i < cHAddr.length - 1) ? ":"
-                    : "");
-        }
-        System.out.println();
+//        System.out.print("MAC Address: ");
+//        for (int i = 0; i < cHAddr.length; i++) {
+//            System.out.format("%02X%s", cHAddr[i], (i < cHAddr.length - 1) ? ":"
+//                    : "");
+//        }
+//        System.out.println();
 
-        byte[] dhcpMessage = new byte[1];
-        dhcpMessage[0] = DHCPOptions.DHCPACK;
-        options.putOptionData(DHCPOptions.DHCPMESSAGETYPE, dhcpMessage);
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPDISCOVER;
+        options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+
+        options.putOptionData(DHCPOptions.DHCP_OPTIONS_HOST_NAME, hostName);
+
         // DHCP: Magic Cookie = [OK]
         // DHCP: Option Field (options)
         // DHCP: DHCP Message Type = DHCP Discover
@@ -152,17 +155,17 @@ public class DHCPMessage {
 
     public byte[] offerMsg(byte[] offerYIAddr, byte[] serverId, byte[] timeLease, byte[] subnetMask, byte[] router, byte[] dns) {
         op = DHCPREPLY;
-        for(int i = 0; i < offerYIAddr.length; i++)
-            yIAddr[i] = offerYIAddr[i];
+        System.arraycopy(offerYIAddr, 0, yIAddr, 0, offerYIAddr.length);
 
-        byte[] dhcpMessage = new byte[1];
-        dhcpMessage[0] = DHCPOptions.DHCPOFFER;
-        options.putOptionData(DHCPOptions.DHCPMESSAGETYPE, dhcpMessage);
-        options.putOptionData(DHCPOptions.DHCP_MSG_SERVER_ID, serverId);
-        options.putOptionData(DHCPOptions.DHCP_MSG_TIMELEASE, timeLease);
-        options.putOptionData(DHCPOptions.DHCP_MSG_SUBNET_MASK, subnetMask);
-        options.putOptionData(DHCPOptions.DHCP_MSG_ROUTER, router);
-        options.putOptionData(DHCPOptions.DHCP_MSG_DNS, dns);
+        options.reset();
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPOFFER;
+        options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_SERVER_ID, serverId);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_TIMELEASE, timeLease);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_SUBNET_MASK, subnetMask);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_ROUTER, router);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_DNS, dns);
         // DHCP: Magic Cookie = [OK]
         // DHCP: Option Field (options)
         // DHCP: DHCP Message Type = DHCP Discover
@@ -170,6 +173,21 @@ public class DHCPMessage {
         // DHCP: Host Name = JUMBO-WS
         // DHCP: Parameter Request List = (Length: 7) 01 0f 03 2c 2e 2f 06
         // DHCP: End of this option field
+
+        return this.externalize();
+    }
+
+    public byte[] requestMsg(byte[] requestIPAddr, byte[] serverId, byte[] timeLease, byte[] hostName) {
+        op = DHCPREQUEST;
+
+        options.reset();
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPREQUEST;
+        options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_REQUEST_IP, requestIPAddr);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_SERVER_ID, serverId);
+        options.putOptionData(DHCPOptions.DHCP_OPTION_TIMELEASE, timeLease);
+        options.putOptionData(DHCPOptions.DHCP_OPTIONS_HOST_NAME, hostName);
 
         return this.externalize();
     }
@@ -338,27 +356,27 @@ public class DHCPMessage {
     public String toString() {
         String msg = new String();
 
-        msg += "Operation Code: " + this.op + "\n";
+        msg += "Operation Code: " + (this.op == 1?"Request(1)":"Reply(2)") + "\n";
         msg += "Hardware Type: " + this.hType  + "\n";
         msg += "Hardware Length: " + this.hLen  + "\n";
         msg += "Hops: " + this.hops + "\n";
 
-        msg += Integer.toString(xid) + "\n";
-        msg += Short.toString(secs) + "\n";
-        msg += Short.toString(flags) + "\n";
-        msg += cIAddr.toString() + "\n";
-        msg += yIAddr.toString() + "\n";
-        msg += sIAddr.toString() + "\n";
-        msg += gIAddr.toString() + "\n";
-        msg += cHAddr.toString() + "\n";
-        msg += sName.toString() + "\n";
-        msg += file.toString() + "\n";
+        msg += "xID: " + Integer.toString(xid) + "\n";
+        msg += "Secs: " + Short.toString(secs) + "\n";
+        msg += "Flag: " + Short.toString(flags) + "\n";
+        msg += "Client IP Adress: " + Utils.ipToString(cIAddr) + "\n";
+        msg += "Your Ip Adress: " + Utils.ipToString(yIAddr) + "\n";
+        msg += "Server IP Adress: " + Utils.ipToString(sIAddr) + "\n";
+        msg += "Gateway IP Adress: " + Utils.ipToString(gIAddr) + "\n";
+        msg += "Client Hardward Adress: " + Utils.macToString(cHAddr) + "\n";
+        msg += "Server Name: " + new String(sName).trim() + "\n";
+        msg += "Boot File Path: " + new String(file).trim() + "\n";
 
         msg += options.toString() + "\n";
 
         //add options
-        assert(file != null);
-        assert (options != null);
+//        assert(file != null);
+//        assert (options != null);
         //msg += options.toString();
 
         //return super.toString();

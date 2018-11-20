@@ -7,6 +7,7 @@ import com.company.dhcpserver.DHCPServer;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,7 +16,8 @@ public class DHCPClient {
     private static final int MAX_BUFFER_SIZE = 1024; // 1024 bytes
     public final static int CLIENT_PORT =  1668;//68;
     private DatagramSocket socket;
-
+    public final static byte[] CLIENT_HARDWARD_ADDRESS = new byte[] {0x12, 0x34, 0x56, 0x78, (byte) 0x9A, (byte) 0xBC};
+    private final static String HOST_NAME = "MY PC1";
 
     public DHCPClient() throws SocketException {
         socket = new DatagramSocket();
@@ -35,8 +37,11 @@ public class DHCPClient {
             byte[] router = new byte[] {(byte) 192, (byte) 168, 1, 1};
             byte[] dns = new byte[] {8, 8, 8, 8, 4, 4, 4, 4};
 
-//            byte[] data = discoveryMsg.discoverMsg(NetworkUtils.getMacAddress());
+            discoveryMsg.discoverMsg(CLIENT_HARDWARD_ADDRESS, HOST_NAME.getBytes());
+            System.out.println(discoveryMsg.toString());
+
             byte[] data = discoveryMsg.offerMsg(offerYIAddr, serverId, timeLease, subnetMask, router, dns);
+            System.out.println(discoveryMsg.toString());
             client = new DHCPClient();
             List<InetAddress> brList = NetworkUtils.listAllBroadcastAddresses();
             for(InetAddress inetAddress: brList) {
