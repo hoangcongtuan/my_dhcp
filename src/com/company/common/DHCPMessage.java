@@ -65,8 +65,6 @@ public class DHCPMessage {
     //Options: (variable)
     private DHCPOptions options;
 
-
-
     public DHCPMessage() {
         cIAddr = new byte[4];
         yIAddr = new byte[4];
@@ -76,8 +74,6 @@ public class DHCPMessage {
         sName = new byte[64];
         file = new byte[128];
         options = new DHCPOptions();
-
-//        this.printMessage();
     }
 
     public DHCPMessage(byte[] data) {
@@ -95,9 +91,9 @@ public class DHCPMessage {
         this.hLen = data[2];
         this.hops = data[3];
 
-        this.xid = bytestoint(Arrays.copyOfRange(data, 4, 8));
-        this.secs = bytestoshort(Arrays.copyOfRange(data, 8, 10));
-        this.flags = bytestoshort(Arrays.copyOfRange(data, 10, 12));
+        this.xid = Utils.bytesToInt(Arrays.copyOfRange(data, 4, 8));
+        this.secs = Utils.bytestoshort(Arrays.copyOfRange(data, 8, 10));
+        this.flags = Utils.bytestoshort(Arrays.copyOfRange(data, 10, 12));
 
         this.cIAddr = Arrays.copyOfRange(data, 12, 16);
         this.yIAddr = Arrays.copyOfRange(data, 16, 20);
@@ -107,9 +103,7 @@ public class DHCPMessage {
         this.sName = Arrays.copyOfRange(data, 44, 108);
         this.file = Arrays.copyOfRange(data, 108, 236);
 
-        this.options = new DHCPOptions(Arrays.copyOfRange(data, 236, data.length - 1));
-
-//        this.printMessage();
+        this.options = new DHCPOptions(Arrays.copyOfRange(data, 236, data.length));
     }
 
     public byte[] discoverMsg(byte[] cMacAddress, byte[] hostName) {
@@ -129,17 +123,9 @@ public class DHCPMessage {
         Arrays.fill(cHAddr, (byte) 0);
         System.arraycopy(cMacAddress, 0, cHAddr, 0, cMacAddress.length);
 
-//        System.out.print("MAC Address: ");
-//        for (int i = 0; i < cHAddr.length; i++) {
-//            System.out.format("%02X%s", cHAddr[i], (i < cHAddr.length - 1) ? ":"
-//                    : "");
-//        }
-//        System.out.println();
-
         byte[] dhcpOptions_msgType = new byte[1];
         dhcpOptions_msgType[0] = DHCPOptions.DHCPDISCOVER;
         options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
-
         options.putOptionData(DHCPOptions.DHCP_OPTIONS_HOST_NAME, hostName);
 
         // DHCP: Magic Cookie = [OK]
@@ -149,11 +135,11 @@ public class DHCPMessage {
         // DHCP: Host Name = JUMBO-WS
         // DHCP: Parameter Request List = (Length: 7) 01 0f 03 2c 2e 2f 06
         // DHCP: End of this option field
-
         return this.externalize();
     }
 
-    public byte[] offerMsg(byte[] offerYIAddr, byte[] serverId, byte[] timeLease, byte[] subnetMask, byte[] router, byte[] dns) {
+    public byte[] offerMsg(byte[] offerYIAddr, byte[] serverId, byte[] timeLease,
+                           byte[] subnetMask, byte[] router, byte[] dns) {
         op = DHCPREPLY;
         System.arraycopy(offerYIAddr, 0, yIAddr, 0, offerYIAddr.length);
 
@@ -210,9 +196,9 @@ public class DHCPMessage {
         msg[3] = this.hops;
 
         //add multibytes
-        for (int i=0; i < 4; i++) msg[4+i] = inttobytes(xid)[i];
-        for (int i=0; i < 2; i++) msg[8+i] = shorttobytes(secs)[i];
-        for (int i=0; i < 2; i++) msg[10+i] = shorttobytes(flags)[i];
+        for (int i=0; i < 4; i++) msg[4+i] = Utils.intToBytes(xid)[i];
+        for (int i=0; i < 2; i++) msg[8+i] = Utils.shorttobytes(secs)[i];
+        for (int i=0; i < 2; i++) msg[10+i] = Utils.shorttobytes(flags)[i];
         for (int i=0; i < 4; i++) msg[12+i] = cIAddr[i];
         for (int i=0; i < 4; i++) msg[16+i] = yIAddr[i];
         for (int i=0; i < 4; i++) msg[20+i] = sIAddr[i];
@@ -374,36 +360,6 @@ public class DHCPMessage {
 
         msg += options.toString() + "\n";
 
-        //add options
-//        assert(file != null);
-//        assert (options != null);
-        //msg += options.toString();
-
-        //return super.toString();
         return msg;
-    }
-
-    private byte[] inttobytes(int i){
-        byte[] dword = new byte[4];
-        dword[0] = (byte) ((i >> 24) & 0x000000FF);
-        dword[1] = (byte) ((i >> 16) & 0x000000FF);
-        dword[2] = (byte) ((i >> 8) & 0x000000FF);
-        dword[3] = (byte) (i & 0x00FF);
-        return dword;
-    }
-
-    private int bytestoint(byte[] data) {
-        return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
-    }
-
-    private byte[] shorttobytes(short i){
-        byte[] b = new byte[2];
-        b[0] = (byte) ((i >> 8) & 0x000000FF);
-        b[1] = (byte) (i & 0x00FF);
-        return b;
-    }
-
-    private short bytestoshort(byte[] data) {
-        return (short) (data[0] << 8 | data[1]);
     }
 }

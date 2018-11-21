@@ -37,9 +37,9 @@ public class DHCPOptions {
     public DHCPOptions(byte[] data) {
         options = new Hashtable<Integer, byte[]>();
         int i = 0;
-        while (true) {
+        while (i < data.length) {
             int id = data[i];
-            if (id == 0 || i  >= data.length)
+            if (id == 0)
                 break;
             int lenght = data[i + 1];
             byte[] values = Arrays.copyOfRange(data, i + 2, i + 2 + lenght);
@@ -142,7 +142,7 @@ public class DHCPOptions {
             byte[] value = options.get(key);
             switch (key) {
                 case DHCP_OPTIONS_MESSAGE_TYPE:
-                    int msg_type = Utils.bytestoint(value);
+                    int msg_type = value[0];
                     result += String.format(Locale.US, "Option(%d): %s(%s):\n", key, Constants.OPTION_TABLE.get(key),
                             Constants.MESSAGE_TYPE.get(msg_type));
                     result += String.format(Locale.US, "\tLength: %d\n", value.length);
@@ -157,14 +157,14 @@ public class DHCPOptions {
                     break;
 
                 case DHCP_OPTION_TIMELEASE:
-                    int timeLease = Utils.bytestoint(value);
+                    int timeLease = Utils.bytesToInt(value);
                     result += String.format(Locale.US, "Option(%d): %s:\n", key, Constants.OPTION_TABLE.get(key));
                     result += String.format(Locale.US, "\tLength: %d\n", value.length);
                     result += String.format(Locale.US, "\tIP Time Lease: %d\n", timeLease);
                     break;
 
                 case DHCP_OPTIONS_HOST_NAME:
-                    String hostName = new String(value);
+                    String hostName = new String(value).trim();
                     result += String.format(Locale.US, "Option(%d): %s:\n", key, Constants.OPTION_TABLE.get(key));
                     result += String.format(Locale.US, "\tLength: %d\n", value.length);
                     result += String.format(Locale.US, "\tHost Name: %s\n", hostName);
