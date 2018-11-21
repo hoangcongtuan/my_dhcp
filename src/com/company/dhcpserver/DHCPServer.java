@@ -42,7 +42,6 @@ public class DHCPServer {
         DatagramPacket packet
                 = new DatagramPacket(buffer, buffer.length, address, clientPort);
         socket.send(packet);
-//        socket.close();
     }
 
     /**

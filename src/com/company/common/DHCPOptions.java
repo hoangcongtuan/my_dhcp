@@ -2,6 +2,7 @@ package com.company.common;
 
 import com.company.Constants;
 import com.company.Utils;
+import org.omg.PortableInterceptor.SUCCESSFUL;
 
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -32,6 +33,12 @@ public class DHCPOptions {
 
     public DHCPOptions() {
         options = new Hashtable<Integer, byte[]>();
+    }
+
+    public DHCPOptions(DHCPOptions dhcpOptions) {
+        this();
+        for(int id: dhcpOptions.options.keySet())
+            this.options.put(id, dhcpOptions.getOption(id));
     }
 
     public DHCPOptions(byte[] data) {
@@ -69,11 +76,6 @@ public class DHCPOptions {
 
     public void putOptionData(int optionID, byte[] optionData) {
         options.put(optionID, optionData);
-//        byte[] option = new byte[2+optionData.length];
-//        option[0] = (byte) optionID;
-//        option[1] = (byte) optionData.length;
-//        for (int i=0; i < optionData.length; i++) option[2+i] = optionData[i];
-//        options.put(optionID, option);
     }
 
     public void printOption (int optionID) {
@@ -96,14 +98,6 @@ public class DHCPOptions {
         }
     }
 
-
-
-    public static void main (String[] args) {
-        DHCPOptions test = new DHCPOptions();
-
-        //test.printOptions();
-    }
-
     public byte[] externalize() {
         //get size
         int totalBytes = 0;
@@ -112,14 +106,6 @@ public class DHCPOptions {
         }
 
         byte[] option_data = new byte[totalBytes];
-
-//        //copy bytes
-//        int index = 0;
-//        for (byte[] option : this.options.values()) {
-//            System.arraycopy(option, 0, option_data, index, option.length);
-//            index += option.length;
-//        }
-
         int index = 0;
         for(int id :this.options.keySet()) {
             //id:lenght:[data]
