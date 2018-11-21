@@ -92,8 +92,8 @@ public class DHCPMessage {
         this.hops = data[3];
 
         this.xid = Utils.bytesToInt(Arrays.copyOfRange(data, 4, 8));
-        this.secs = Utils.bytestoshort(Arrays.copyOfRange(data, 8, 10));
-        this.flags = Utils.bytestoshort(Arrays.copyOfRange(data, 10, 12));
+        this.secs = Utils.bytesToShort(Arrays.copyOfRange(data, 8, 10));
+        this.flags = Utils.bytesToShort(Arrays.copyOfRange(data, 10, 12));
 
         this.cIAddr = Arrays.copyOfRange(data, 12, 16);
         this.yIAddr = Arrays.copyOfRange(data, 16, 20);
@@ -197,8 +197,8 @@ public class DHCPMessage {
 
         //add multibytes
         for (int i=0; i < 4; i++) msg[4+i] = Utils.intToBytes(xid)[i];
-        for (int i=0; i < 2; i++) msg[8+i] = Utils.shorttobytes(secs)[i];
-        for (int i=0; i < 2; i++) msg[10+i] = Utils.shorttobytes(flags)[i];
+        for (int i=0; i < 2; i++) msg[8+i] = Utils.shortToByte(secs)[i];
+        for (int i=0; i < 2; i++) msg[10+i] = Utils.shortToByte(flags)[i];
         for (int i=0; i < 4; i++) msg[12+i] = cIAddr[i];
         for (int i=0; i < 4; i++) msg[16+i] = yIAddr[i];
         for (int i=0; i < 4; i++) msg[20+i] = sIAddr[i];
