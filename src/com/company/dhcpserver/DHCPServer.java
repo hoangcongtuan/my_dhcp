@@ -1,13 +1,15 @@
 package com.company.dhcpserver;
 
-import com.company.NetworkUtils;
+import com.company.Utils;
 import com.company.common.DHCPMessage;
-import sun.nio.ch.Net;
+import com.company.model.ClientData;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class DHCPServer {
@@ -15,22 +17,60 @@ public class DHCPServer {
     public static final int SERVER_PORT = 1667;//67;
     DatagramSocket socket;
 
+    //client data
+    List<ClientData> clientDataList = new ArrayList<>();
+
     public DHCPServer() throws IOException {
-            socket = new DatagramSocket(SERVER_PORT);
+//            socket = new DatagramSocket(SERVER_PORT);
+//
+//            byte[] payload = new byte[MAX_BUFFER_SIZE];
+//            DatagramPacket p = new DatagramPacket(payload, MAX_BUFFER_SIZE);
+//            System.out.println("DHCP Server Listening on port " + SERVER_PORT + "...");
+//
+//            //server is always listening
+//            boolean listening = true;
+//            while (listening) {
+//                socket.receive(p); //throws i/o exception
+//                byte[] msg = p.getData();
+//                DHCPMessage dhcpMessage = new DHCPMessage(msg);
+//                System.out.println("Data Received: \n" + dhcpMessage.toString());
+//            }
+//            socket.close();
+        try {
+            testRWObject();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
 
-            byte[] payload = new byte[MAX_BUFFER_SIZE];
-            DatagramPacket p = new DatagramPacket(payload, MAX_BUFFER_SIZE);
-            System.out.println("DHCP Server Listening on port " + SERVER_PORT + "...");
+    }
 
-            //server is always listening
-            boolean listening = true;
-            while (listening) {
-                socket.receive(p); //throws i/o exception
-                byte[] msg = p.getData();
-                DHCPMessage dhcpMessage = new DHCPMessage(msg);
-                System.out.println("Data Received: " + new String(p.getData()).trim());
-            }
-            socket.close();
+    public void testRWObject() throws IOException, ClassNotFoundException {
+        byte[] offerYIAddr = new byte[] {(byte) 192, (byte) 168, 1, 4};
+        byte[] serverId = new byte[] {(byte) 192, (byte) 168, 1, 1};
+        byte[] timeLease = Utils.intToBytes(123456);
+        byte[] subnetMask = new byte[] {(byte) 255, (byte) 255, (byte) 255, (byte) 255};
+        byte[] router = new byte[] {(byte) 192, (byte) 168, 1, 1};
+        byte[] dns = new byte[] {8, 8, 8, 8, 4, 4, 4, 4};
+        byte[] CLIENT_HARDWARD_ADDRESS = new byte[] {0x12, 0x34, 0x56, 0x78, (byte) 0x9A, (byte) 0xBC};
+        String HOST_NAME = "MY PC1";
+
+
+
+//        ClientData client1 = new ClientData(CLIENT_HARDWARD_ADDRESS, HOST_NAME, offerYIAddr, 123456);
+//        ClientData client2 = new ClientData(CLIENT_HARDWARD_ADDRESS, HOST_NAME, serverId, 654321);
+//        System.out.println("Client 1 data:\n" + client1.toString());
+//        System.out.println("Client 2 data:\n" + client2.toString());
+//
+//        clientDataList.add(client1);
+//        clientDataList.add(client2);
+//
+//        saveListClientToFile(clientDataList, "data.txt");
+        List<ClientData> list = loadClientDataList("data.txt");
+
+        for(ClientData data: list) {
+            ClientData clientData = (ClientData) data;
+            System.out.println("Client data:\n" + clientData.toString());
+        }
     }
 
     private void broadcast(
@@ -44,9 +84,44 @@ public class DHCPServer {
         socket.send(packet);
     }
 
-    /**
-     * @param args
-     */
+    public boolean isClientExist(byte[] macAddress) {
+        for(ClientData client : clientDataList) {
+            if (Arrays.equals(client.getMacAddress(), macAddress))
+                return true;
+        }
+        return false;
+    }
+
+    public static void saveListClientToFile(List<ClientData> clientDataList, String path) throws IOException {
+        FileOutputStream fileOut = new FileOutputStream(path);
+        ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
+        for(ClientData object: clientDataList) {
+            objectOut.writeObject(object);
+        }
+        objectOut.close();
+    }
+
+    public static List<ClientData> loadClientDataList(String path) throws IOException, ClassNotFoundException {
+        FileInputStream fileInputStream = new FileInputStream(path);
+        List<ClientData> clientDataList = new ArrayList<>();
+        ObjectInputStream objectIn = new ObjectInputStream(fileInputStream);
+
+        try {
+            while (true) {
+                ClientData clientData = (ClientData) objectIn.readObject();
+                clientDataList.add(clientData);
+            }
+        } catch (EOFException e) {
+
+        }
+        finally {
+            objectIn.close();
+        }
+
+
+        return clientDataList;
+    }
+
     public static void main(String[] args) {
         try {
             DHCPServer server = new DHCPServer();

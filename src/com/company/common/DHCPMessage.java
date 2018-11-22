@@ -2,7 +2,6 @@ package com.company.common;
 
 import com.company.Utils;
 
-import javax.security.sasl.SaslServer;
 import java.util.Arrays;
 
 public class DHCPMessage {
@@ -107,7 +106,7 @@ public class DHCPMessage {
         file = new byte[128];
         options = new DHCPOptions();
 
-        this.hops = data[0];
+        this.op = data[0];
         this.hType = data[1];
         this.hLen = data[2];
         this.hops = data[3];
@@ -150,13 +149,6 @@ public class DHCPMessage {
         discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
         discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_HOST_NAME, hostName);
 
-        // DHCP: Magic Cookie = [OK]
-        // DHCP: Option Field (options)
-        // DHCP: DHCP Message Type = DHCP Discover
-        // DHCP: Client-identifier = (Type: 1) 08 00 2b 2e d8 5e
-        // DHCP: Host Name = JUMBO-WS
-        // DHCP: Parameter Request List = (Length: 7) 01 0f 03 2c 2e 2f 06
-        // DHCP: End of this option field
         return discoverMsg;
     }
 
@@ -175,13 +167,6 @@ public class DHCPMessage {
         offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_SUBNET_MASK, subnetMask);
         offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_ROUTER, router);
         offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_DNS, dns);
-        // DHCP: Magic Cookie = [OK]
-        // DHCP: Option Field (options)
-        // DHCP: DHCP Message Type = DHCP Discover
-        // DHCP: Client-identifier = (Type: 1) 08 00 2b 2e d8 5e
-        // DHCP: Host Name = JUMBO-WS
-        // DHCP: Parameter Request List = (Length: 7) 01 0f 03 2c 2e 2f 06
-        // DHCP: End of this option field
 
         return offerMsg;
     }
@@ -248,7 +233,8 @@ public class DHCPMessage {
 
     /**
      * Converts a DHCPMessage object to a byte array.
-     * @return  a byte array with information from DHCPMessage object.
+     *
+     * @return a byte array with information from DHCPMessage object.
      */
     public byte[] externalize() {
         int staticSize = 236;
@@ -264,19 +250,19 @@ public class DHCPMessage {
         msg[3] = this.hops;
 
         //add multibytes
-        for (int i=0; i < 4; i++) msg[4+i] = Utils.intToBytes(xid)[i];
-        for (int i=0; i < 2; i++) msg[8+i] = Utils.shortToByte(secs)[i];
-        for (int i=0; i < 2; i++) msg[10+i] = Utils.shortToByte(flags)[i];
-        for (int i=0; i < 4; i++) msg[12+i] = cIAddr[i];
-        for (int i=0; i < 4; i++) msg[16+i] = yIAddr[i];
-        for (int i=0; i < 4; i++) msg[20+i] = sIAddr[i];
-        for (int i=0; i < 4; i++) msg[24+i] = gIAddr[i];
-        for (int i=0; i < cHAddr.length; i++) msg[28+i] = cHAddr[i];
-        for (int i=0; i < 64; i++) msg[44+i] = sName[i];
-        for (int i=0; i < 128; i++) msg[108+i] = file[i];
+        for (int i = 0; i < 4; i++) msg[4 + i] = Utils.intToBytes(xid)[i];
+        for (int i = 0; i < 2; i++) msg[8 + i] = Utils.shortToByte(secs)[i];
+        for (int i = 0; i < 2; i++) msg[10 + i] = Utils.shortToByte(flags)[i];
+        for (int i = 0; i < 4; i++) msg[12 + i] = cIAddr[i];
+        for (int i = 0; i < 4; i++) msg[16 + i] = yIAddr[i];
+        for (int i = 0; i < 4; i++) msg[20 + i] = sIAddr[i];
+        for (int i = 0; i < 4; i++) msg[24 + i] = gIAddr[i];
+        for (int i = 0; i < cHAddr.length; i++) msg[28 + i] = cHAddr[i];
+        for (int i = 0; i < 64; i++) msg[44 + i] = sName[i];
+        for (int i = 0; i < 128; i++) msg[108 + i] = file[i];
 
         //add options
-        for (int i=0; i < options.length; i++) msg[staticSize+i] = options[i];
+        for (int i = 0; i < options.length; i++) msg[staticSize + i] = options[i];
 
         return msg;
     }
@@ -410,9 +396,9 @@ public class DHCPMessage {
     public String toString() {
         String msg = new String();
 
-        msg += "Operation Code: " + (this.op == 1?"Request(1)":"Reply(2)") + "\n";
-        msg += "Hardware Type: " + this.hType  + "\n";
-        msg += "Hardware Length: " + this.hLen  + "\n";
+        msg += "Operation Code: " + (this.op == 1 ? "Request(1)" : "Reply(2)") + "\n";
+        msg += "Hardware Type: " + this.hType + "\n";
+        msg += "Hardware Length: " + this.hLen + "\n";
         msg += "Hops: " + this.hops + "\n";
 
         msg += "xID: " + Integer.toString(xid) + "\n";

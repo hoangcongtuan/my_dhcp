@@ -36,14 +36,14 @@ public class DHCPClient {
             byte[] dns = new byte[] {8, 8, 8, 8, 4, 4, 4, 4};
 
             DHCPMessage discoveryMsg = dhcpMessage.createDiscoverMsg(CLIENT_HARDWARD_ADDRESS, HOST_NAME.getBytes());
+            byte[] data = discoveryMsg.externalize();
             System.out.println(discoveryMsg.toString());
 
-            byte[] data = discoveryMsg.externalize();
-            DHCPMessage receivedDHCPMessage = new DHCPMessage(data);
-            System.out.println(receivedDHCPMessage.toString());
-
-            DHCPMessage offerMessage = discoveryMsg.createOfferMsg(offerYIAddr, serverId, timeLease, subnetMask, router, dns);
-            System.out.println(offerMessage.toString());
+//            DHCPMessage receivedDHCPMessage = new DHCPMessage(data);
+//            System.out.println(receivedDHCPMessage.toString());
+//
+//            DHCPMessage offerMessage = discoveryMsg.createOfferMsg(offerYIAddr, serverId, timeLease, subnetMask, router, dns);
+//            System.out.println(offerMessage.toString());
 
             client = new DHCPClient();
             List<InetAddress> brList = NetworkUtils.listAllBroadcastAddresses();

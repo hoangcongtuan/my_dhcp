@@ -28,7 +28,6 @@ public class DHCPOptions {
     public static final int DHCP_OPTIONS_HOST_NAME = 12;
     public static final int DHCP_OPTION_REQUEST_IP = 50;
 
-    //private LinkedList<byte[]> options = new LinkedList<byte[]>();
     private Hashtable<Integer,byte[]> options;
 
     public DHCPOptions() {
