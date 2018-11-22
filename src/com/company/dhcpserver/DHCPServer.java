@@ -1,13 +1,17 @@
 package com.company.dhcpserver;
 
+import com.company.NetworkUtils;
 import com.company.Utils;
 import com.company.common.DHCPMessage;
+import com.company.common.DHCPOptions;
+import com.company.dhcpclient.DHCPClient;
 import com.company.model.ClientData;
 
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -21,6 +25,39 @@ public class DHCPServer {
     List<ClientData> clientDataList = new ArrayList<>();
 
     public DHCPServer() throws IOException {
+        DatagramSocket socket = new DatagramSocket(SERVER_PORT);
+        byte[] buffer = new byte[MAX_BUFFER_SIZE];
+        boolean isContinue = true;
+        while (isContinue) {
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+            socket.receive(packet);
+            DHCPMessage dhcpMessage = new DHCPMessage(packet.getData());
+            int messageType = dhcpMessage.getOptions().getOption(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE)[0];
+            switch (messageType) {
+                case DHCPOptions.DHCPDISCOVER:
+                    processDiscoverMessage(dhcpMessage, socket);
+                    break;
+                case DHCPOptions.DHCPREQUEST:
+                    byte[] targetServerIp = dhcpMessage.getOptions().getOption(DHCPOptions.DHCP_OPTION_SERVER_ID);
+                    System.out.println("Request Message:\n" + dhcpMessage.toString());
+                    // TODO: 11/22/18 Check targetServerIp, in this example, it always true
+
+                    byte[] subnetMask = new byte[] {(byte) 255, (byte) 255, (byte) 255, (byte) 255};
+                    byte[] router = new byte[] {(byte) 192, (byte) 168, 1, 1};
+                    byte[] dns = new byte[] {8, 8, 8, 8, 4, 4, 4, 4};
+                    DHCPMessage ackMessage = dhcpMessage.createACKMsg(subnetMask, router, dns);
+                    System.out.println("ACK Message:\n" + ackMessage.toString());
+                    byte[] ack_buffer = ackMessage.externalize();
+                    broadcastMessage(ack_buffer, socket, NetworkUtils.listAllBroadcastAddresses(), DHCPClient.CLIENT_PORT);
+                    break;
+                    default:
+                        isContinue = false;
+                        break;
+            }
+
+        }
+
+        System.out.println("End Time!!");
 //            socket = new DatagramSocket(SERVER_PORT);
 //
 //            byte[] payload = new byte[MAX_BUFFER_SIZE];
@@ -44,7 +81,9 @@ public class DHCPServer {
 
     }
 
-    public void testRWObject() throws IOException, ClassNotFoundException {
+    private void processDiscoverMessage(DHCPMessage dhcpMessage, DatagramSocket socket) throws IOException {
+        System.out.println("Discover Message:\n" + dhcpMessage.toString());
+
         byte[] offerYIAddr = new byte[] {(byte) 192, (byte) 168, 1, 4};
         byte[] serverId = new byte[] {(byte) 192, (byte) 168, 1, 1};
         byte[] timeLease = Utils.intToBytes(123456);
@@ -53,6 +92,22 @@ public class DHCPServer {
         byte[] dns = new byte[] {8, 8, 8, 8, 4, 4, 4, 4};
         byte[] CLIENT_HARDWARD_ADDRESS = new byte[] {0x12, 0x34, 0x56, 0x78, (byte) 0x9A, (byte) 0xBC};
         String HOST_NAME = "MY PC1";
+        // TODO: 11/22/18 send offer messsage
+        DHCPMessage offerMessage = dhcpMessage.createOfferMsg(offerYIAddr, serverId, timeLease, subnetMask, router, dns);
+        byte[] buffer = offerMessage.externalize();
+        broadcastMessage(buffer, socket, NetworkUtils.listAllBroadcastAddresses(), DHCPClient.CLIENT_PORT);
+    }
+
+    private void broadcastMessage(byte[] message, DatagramSocket socket, List<InetAddress> broadcastList, int port) throws IOException {
+        socket.setBroadcast(true);
+        for(InetAddress address: broadcastList) {
+            DatagramPacket packet = new DatagramPacket(message, message.length, address, port);
+            socket.send(packet);
+        }
+    }
+
+    public void testRWObject() throws IOException, ClassNotFoundException {
+
 
 
 

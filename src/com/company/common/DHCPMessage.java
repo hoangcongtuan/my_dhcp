@@ -3,6 +3,7 @@ package com.company.common;
 import com.company.Utils;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class DHCPMessage {
     private static final int BOOTREQUEST = 1;
@@ -379,8 +380,8 @@ public class DHCPMessage {
         this.file = file;
     }
 
-    public byte[] getOptions() {
-        return options.externalize();
+    public DHCPOptions getOptions() {
+        return options;
     }
 
     //no set options yet...
