@@ -6,8 +6,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 public class DHCPMessage {
-    private static final int BOOTREQUEST = 1;
-    private static final int BOOTREPLY = 2;
     private static final int DHCPREQUEST = 1;
     private static final int DHCPREPLY = 2;
     private static final int ETHERNET10MB = 1;

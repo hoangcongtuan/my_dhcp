@@ -2,7 +2,6 @@ package com.company.common;
 
 import com.company.Constants;
 import com.company.Utils;
-import org.omg.PortableInterceptor.SUCCESSFUL;
 
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -23,7 +22,7 @@ public class DHCPOptions {
     public static final int DHCP_OPTION_SERVER_ID = 54;
     public static final int DHCP_OPTION_TIMELEASE = 51;
     public static final int DHCP_OPTION_SUBNET_MASK = 1;
-    public static final int DHCP_OPTION_ROUTER = 3;
+    public static final int DHCP_OPTION_ROUTER = 3  ;
     public static final int DHCP_OPTION_DNS = 6;
     public static final int DHCP_OPTIONS_HOST_NAME = 12;
     public static final int DHCP_OPTION_REQUEST_IP = 50;
@@ -31,7 +30,7 @@ public class DHCPOptions {
     private Hashtable<Integer,byte[]> options;
 
     public DHCPOptions() {
-        options = new Hashtable<Integer, byte[]>();
+        options = new Hashtable<>();
     }
 
     public DHCPOptions(DHCPOptions dhcpOptions) {
