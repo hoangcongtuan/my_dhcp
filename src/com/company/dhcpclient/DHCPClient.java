@@ -5,10 +5,10 @@ import com.company.Utils;
 import com.company.common.DHCPMessage;
 import com.company.common.DHCPOptions;
 import com.company.dhcpserver.DHCPServer;
+import com.company.model.ClientData;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
-import java.util.Arrays;
 import java.util.List;
 
 public class DHCPClient {
@@ -16,8 +16,6 @@ public class DHCPClient {
     private static final int MAX_BUFFER_SIZE = 1024; // 1024 bytes
     public final static int CLIENT_PORT =  1668;//68;
     private final static int TIME_OUT = 5000; //in millis
-    public final static byte[] CLIENT_HARDWARD_ADDRESS = new byte[] {0x12, 0x34, 0x56, 0x78, (byte) 0x9A, (byte) 0xBC};
-    private final static String HOST_NAME = "MY PC1";
 
     public final static int STATE_INIT = 0;
     public final static int STATE_SELECTING = 1;
@@ -28,6 +26,8 @@ public class DHCPClient {
     private boolean isContinue;
     private int myXid;
 
+    ClientData mConfig;
+
 
     public DHCPClient() throws IOException {
         DatagramSocket socket = new DatagramSocket(CLIENT_PORT);
@@ -35,12 +35,17 @@ public class DHCPClient {
         currentState = STATE_INIT;
         isContinue = true;
 
+        mConfig = loadMyConfig("clientConfig.txt");
+
         while (isContinue) {
             switch (currentState) {
                 case STATE_INIT:
                     DHCPMessage tempMsg = new DHCPMessage();
                     myXid = tempMsg.getXid();
-                    DHCPMessage discoverMsg = tempMsg.createDiscoverMsg(CLIENT_HARDWARD_ADDRESS, HOST_NAME.getBytes());
+                    DHCPMessage discoverMsg = tempMsg.createDiscoverMsg(
+                            mConfig.getMacAddress(),
+                            mConfig.getHostName().getBytes(),
+                            mConfig.getIpAddress());
                     System.out.println("Discover Message:\n" + discoverMsg.toString());
                     //send discovery message to server
                     byte[] message_buffer = discoverMsg.externalize();
@@ -68,7 +73,7 @@ public class DHCPClient {
                     byte[] timeLease = offerMessage.getOptions().getOption(DHCPOptions.DHCP_OPTION_TIMELEASE);
 
                     DHCPMessage requestMessage
-                            = offerMessage.createRequestMsg(requestIpAddress, serverId, timeLease, HOST_NAME.getBytes());
+                            = offerMessage.createRequestMsg(requestIpAddress, serverId, timeLease, mConfig.getHostName().getBytes());
                     byte[] request_buffer = requestMessage.externalize();
                     broadcastMessage(request_buffer, socket, NetworkUtils.listAllBroadcastAddresses());
                     currentState = STATE_REQUESTING;
@@ -93,19 +98,25 @@ public class DHCPClient {
                         currentState = STATE_INIT;
                         break;
                     } else if (messageType == DHCPOptions.DHCPACK) {
-                        byte[] ip = ackMessage.getYIAddr();
+                        byte[] bufferIP = ackMessage.getYIAddr();
+                        byte[] bufferTimeLease = ackMessage.getOptions().getOption(DHCPOptions.DHCP_OPTION_TIMELEASE);
                         // TODO: 11/22/18 check ip is can use, in this example, it always be can use
                         currentState = STATE_BOUDING;
+                        mConfig.setIpAddress(bufferIP);
+                        mConfig.setLeaseTimeRemain(Utils.bytesToInt(bufferTimeLease));
                         break;
                     } else {
                         // TODO: 11/22/18 unExpected State, re lease again
                         currentState = STATE_INIT;
                     }
                     break;
+
                 case STATE_BOUDING:
+                    saveMyConfig("clientConfig.txt", mConfig);
                     System.out.println("Finish Allocation IP Address, open browser and go to favorite website, enjoi!!");
                     isContinue = false;
                     break;
+
                 default:
                         isContinue = false;
                         break;
@@ -114,6 +125,45 @@ public class DHCPClient {
 
         System.out.println("End time!!");
 
+    }
+
+    private ClientData loadMyConfig(String path) throws IOException {
+        ClientData myConfig = new ClientData();
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        String line = null;
+        if ((line = br.readLine()) != null) {
+            byte[] macAddress = Utils.strToMAC(line);
+            String hostName = br.readLine();
+            byte[] ipAddress = Utils.strToIp(br.readLine());
+            int timeLeaseRemain = Integer.parseInt(br.readLine());
+
+            myConfig.setMacAddress(macAddress);
+            myConfig.setHostName(hostName);
+            myConfig.setIpAddress(ipAddress);
+            myConfig.setLeaseTimeRemain(timeLeaseRemain);
+        }
+
+        br.close();
+        return myConfig;
+    }
+
+    private void saveMyConfig(String path, ClientData config) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(path));
+        String line = null;
+        String strMac = Utils.macToString(config.getMacAddress());
+        String strHostName = config.getHostName();
+        String strIP = Utils.ipToString(config.getIpAddress());
+        String strTimeLease = String.valueOf(config.getLeaseTimeRemain());
+
+        bw.write(strMac);
+        bw.newLine();
+        bw.write(strHostName);
+        bw.newLine();
+        bw.write(strIP);
+        bw.newLine();
+        bw.write(strTimeLease);
+
+        bw.close();
     }
 
     /**
@@ -125,27 +175,6 @@ public class DHCPClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        try {
-//            DHCPMessage dhcpMessage = new DHCPMessage();
-//            byte[] offerYIAddr = new byte[] {(byte) 192, (byte) 168, 1, 4};
-//            byte[] serverId = new byte[] {(byte) 192, (byte) 168, 1, 1};
-//            byte[] timeLease = Utils.intToBytes(123456);
-//            byte[] subnetMask = new byte[] {(byte) 255, (byte) 255, (byte) 255, (byte) 255};
-//            byte[] router = new byte[] {(byte) 192, (byte) 168, 1, 1};
-//            byte[] dns = new byte[] {8, 8, 8, 8, 4, 4, 4, 4};
-//
-//            DHCPMessage discoveryMsg = dhcpMessage.createDiscoverMsg(CLIENT_HARDWARD_ADDRESS, HOST_NAME.getBytes());
-//            byte[] data = discoveryMsg.externalize();
-//            System.out.println(discoveryMsg.toString());
-
-//            client = new DHCPClient();
-//            List<InetAddress> brList = NetworkUtils.listAllBroadcastAddresses();
-//            for(InetAddress inetAddress: brList) {
-//                client.broadcast(data, inetAddress);
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     private void broadcastMessage(byte[] message, DatagramSocket socket, List<InetAddress> broadcastList) throws IOException {
@@ -155,14 +184,4 @@ public class DHCPClient {
             socket.send(packet);
         }
     }
-
-
-//    private void broadcast(
-//            byte[] buffer, InetAddress address) throws IOException {
-//        socket.setBroadcast(true);
-//
-//        DatagramPacket packet
-//                = new DatagramPacket(buffer, buffer.length, address, DHCPServer.SERVER_PORT);
-//        socket.send(packet);
-//    }
 }

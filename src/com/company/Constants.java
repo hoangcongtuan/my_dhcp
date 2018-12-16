@@ -5,6 +5,8 @@ import com.company.common.DHCPOptions;
 import java.util.HashMap;
 
 public class Constants {
+    public static final int MAX_BUFFER_SIZE = 1024; // 1024 bytes
+
     public final static HashMap<Integer, String> OPTION_TABLE = new HashMap<Integer, String>(){{
         put(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, "DHCP Message Type");
         put(DHCPOptions.DHCP_OPTION_SERVER_ID, "DHCP Server Id");

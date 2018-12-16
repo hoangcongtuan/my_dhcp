@@ -125,7 +125,7 @@ public class DHCPMessage {
         this.options = new DHCPOptions(Arrays.copyOfRange(data, 236, data.length));
     }
 
-    public DHCPMessage createDiscoverMsg(byte[] cMacAddress, byte[] hostName) {
+    public DHCPMessage createDiscoverMsg(byte[] cMacAddress, byte[] hostName, byte[] requestIP) {
         DHCPMessage discoverMsg = new DHCPMessage(this);
         discoverMsg.op = DHCPREQUEST;
         discoverMsg.hType = ETHERNET10MB; // (0x1) 10Mb Ethernet
@@ -147,6 +147,7 @@ public class DHCPMessage {
         dhcpOptions_msgType[0] = DHCPOptions.DHCPDISCOVER;
         discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
         discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_HOST_NAME, hostName);
+        discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_REQUEST_IP, requestIP);
 
         return discoverMsg;
     }

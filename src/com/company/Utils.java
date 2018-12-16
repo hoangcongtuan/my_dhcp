@@ -29,4 +29,24 @@ public class Utils {
         return String.format(Locale.US, "%02X:%02X:%02X:%02X:%02X:%02X",
                 macAddress[0], macAddress[1],macAddress[2],macAddress[3],macAddress[4],macAddress[5]);
     }
+
+    public static byte[] strToIp(String strIP) {
+        String octet[] = strIP.split("\\.");
+        byte[] ip = new byte[4];
+
+        for(int i = 0; i < 4; i++)
+            ip[i] = (byte) Integer.parseInt(octet[i]);
+        return ip;
+    }
+
+    public static byte[] strToMAC(String strMAC) {
+        String octet[]  = strMAC.split("\\:");
+        byte[] MAC = new byte[6];
+
+        for(int i = 0; i < 6; i++) {
+            MAC[i] = (byte) Integer.parseInt(octet[i], 16);
+        }
+
+        return MAC;
+    }
 }

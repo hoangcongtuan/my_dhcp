@@ -10,6 +10,10 @@ public class ClientData implements Serializable {
     byte[] ipAddress;
     int leaseTimeRemain; //in second
 
+    public ClientData() {
+
+    }
+
     public ClientData(byte[] macAddress, String hostName, byte[] ipAddress, int leaseTimeRemain) {
         this.macAddress = macAddress.clone();
         this.hostName = hostName;
@@ -52,8 +56,8 @@ public class ClientData implements Serializable {
     @Override
     public String toString() {
         return  Utils.macToString(macAddress) + '\n'
-                + '\t' + hostName + '\n'
-                + '\t' + Utils.ipToString(ipAddress) + '\n'
-                + '\t' + leaseTimeRemain + '\n';
+                + hostName + '\n'
+                + Utils.ipToString(ipAddress) + '\n'
+                + leaseTimeRemain + '\n';
     }
 }
