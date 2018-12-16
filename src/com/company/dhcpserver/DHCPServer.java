@@ -5,7 +5,7 @@ import com.company.NetworkUtils;
 import com.company.Utils;
 import com.company.common.DHCPMessage;
 import com.company.common.DHCPOptions;
-import com.company.dhcpclient.DHCPClient;
+import com.company.dhcpclient.DHCPClientController;
 import com.company.model.ClientData;
 
 import java.io.*;
@@ -19,7 +19,7 @@ import java.util.List;
 public class DHCPServer {
     public static final int SERVER_PORT = 1667;//67;
 
-    private static byte[] START_IP = new byte[] {(byte) 192, (byte) 168, 1, 2};
+    private static byte[] START_IP = new byte[] {(byte) 192, (byte) 168, 1, 100};
     private static byte[] END_IP = new byte[] {(byte) 192, (byte) 168, 1, (byte) 254};
     byte[] SUBNET_MASK = new byte[] {(byte) 255, (byte) 255, (byte) 255, (byte) 255};
     byte[] ROUTER = new byte[] {(byte) 192, (byte) 168, 1, 1};
@@ -61,7 +61,7 @@ public class DHCPServer {
                     DHCPMessage ackMessage = dhcpMessage.createACKMsg(SUBNET_MASK, ROUTER, DNS);
                     System.out.println("ACK Message:\n" + ackMessage.toString());
                     byte[] ack_buffer = ackMessage.externalize();
-                    broadcastMessage(ack_buffer, socket, NetworkUtils.listAllBroadcastAddresses(), DHCPClient.CLIENT_PORT);
+                    broadcastMessage(ack_buffer, socket, NetworkUtils.listAllBroadcastAddresses(), DHCPClientController.CLIENT_PORT);
 
                     //update client table
                     updateClientTable(dhcpMessage.getCHAddr(),
@@ -167,7 +167,7 @@ public class DHCPServer {
 
         DHCPMessage offerMessage = dhcpMessage.createOfferMsg(offerYIAddr, SERVER_IP, timeLease, SUBNET_MASK, ROUTER, DNS);
         byte[] buffer = offerMessage.externalize();
-        broadcastMessage(buffer, socket, NetworkUtils.listAllBroadcastAddresses(), DHCPClient.CLIENT_PORT);
+        broadcastMessage(buffer, socket, NetworkUtils.listAllBroadcastAddresses(), DHCPClientController.CLIENT_PORT);
     }
 
 
