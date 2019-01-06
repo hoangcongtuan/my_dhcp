@@ -19,7 +19,7 @@ import java.util.List;
 public class DHCPServer {
     public static final int SERVER_PORT = 1667;//67;
 
-    private static byte[] START_IP = new byte[] {(byte) 192, (byte) 168, 1, 100};
+    private static byte[] START_IP = new byte[] {(byte) 192, (byte) 168, 1, 2};
     private static byte[] END_IP = new byte[] {(byte) 192, (byte) 168, 1, (byte) 254};
     byte[] SUBNET_MASK = new byte[] {(byte) 255, (byte) 255, (byte) 255, (byte) 255};
     byte[] ROUTER = new byte[] {(byte) 192, (byte) 168, 1, 1};

@@ -13,20 +13,24 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
 
+import javax.rmi.CORBA.Util;
 import java.io.*;
 import java.net.*;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class DHCPClientController implements Initializable {
 
     private static final int MAX_BUFFER_SIZE = 1024; // 1024 bytes
     public final static int CLIENT_PORT = 1668;//68;
-    private final static int TIME_OUT = 5000; //in millis
+    private final static int TIME_OUT = 10000; //in millis
 
     public final static int STATE_INIT = 0;
     public final static int STATE_SELECTING = 1;
@@ -47,10 +51,12 @@ public class DHCPClientController implements Initializable {
     private boolean isContinue;
     private int myXid;
 
+    byte[] specialIP;
+
     ClientData mConfig;
     DatagramSocket socket;
 
-    private void startClient() throws IOException {
+    private void startClient(boolean isRequestAnother) throws IOException {
         currentState = STATE_INIT;
         isContinue = true;
         textLog.clear();
@@ -60,10 +66,17 @@ public class DHCPClientController implements Initializable {
                 case STATE_INIT:
                     DHCPMessage tempMsg = new DHCPMessage();
                     myXid = tempMsg.getXid();
-                    DHCPMessage discoverMsg = tempMsg.createDiscoverMsg(
-                            mConfig.getMacAddress(),
-                            mConfig.getHostName().getBytes(),
-                            mConfig.getIpAddress());
+                    DHCPMessage discoverMsg;
+                    if (!isRequestAnother)
+                        discoverMsg = tempMsg.createDiscoverMsg(
+                                mConfig.getMacAddress(),
+                                mConfig.getHostName().getBytes(),
+                                mConfig.getIpAddress());
+                    else
+                        discoverMsg = tempMsg.createDiscoverMsg(
+                                mConfig.getMacAddress(),
+                                mConfig.getHostName().getBytes(),
+                                specialIP);
                     javafx.application.Platform.runLater( () -> {
                                 textDHCPEvent.appendText("Client: DISCOVERY MESSAGE\n");
                                 textLog.appendText("Client: Discover Message:\n" + discoverMsg.toString());
@@ -226,7 +239,7 @@ public class DHCPClientController implements Initializable {
         new Thread(() -> {
             try {
                 btnRequestAnotherIP.setDisable(true);
-                startClient();
+                startClient(false);
                 btnRequestAnotherIP.setDisable(false);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -236,7 +249,34 @@ public class DHCPClientController implements Initializable {
 
     @FXML
     public void onBtnRequestAnotherIP(ActionEvent actionEvent) {
+        TextInputDialog dialog = new TextInputDialog("");
+        dialog.setTitle("Input special IP");
+        dialog.setHeaderText("Type what you want!");
 
+        dialog.setContentText("Type Special IP:");
+
+        Optional<String> result = dialog.showAndWait();
+
+        if (result.isPresent()) {
+            try {
+                specialIP = Utils.strToIp(result.get());
+                new Thread(() -> {
+                    try {
+                        btnRequestAnotherIP.setDisable(true);
+                        startClient(true);
+                        btnRequestAnotherIP.setDisable(false);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+            } catch (Exception e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error Dialog");
+                alert.setHeaderText("Error Occur!");
+                alert.setContentText("Bad IP Format");
+                alert.show();
+            }
+        }
     }
 
     @Override
