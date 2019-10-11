@@ -1,11 +1,11 @@
 package com.company.common;
 
-import java.lang.reflect.Array;
+import com.company.Utils;
+
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class DHCPMessage {
-    private static final int BOOTREQUEST = 1;
-    private static final int BOOTREPLY = 2;
     private static final int DHCPREQUEST = 1;
     private static final int DHCPREPLY = 2;
     private static final int ETHERNET10MB = 1;
@@ -64,8 +64,6 @@ public class DHCPMessage {
     //Options: (variable)
     private DHCPOptions options;
 
-
-
     public DHCPMessage() {
         cIAddr = new byte[4];
         yIAddr = new byte[4];
@@ -75,9 +73,27 @@ public class DHCPMessage {
         sName = new byte[64];
         file = new byte[128];
         options = new DHCPOptions();
-
-        this.printMessage();
     }
+
+    public DHCPMessage(DHCPMessage msg) {
+        this.op = msg.op;
+        this.hType = msg.hType;
+        this.hLen = msg.hLen;
+        this.hops = msg.hops;
+        this.xid = msg.xid;
+        this.secs = msg.secs;
+        this.flags = msg.flags;
+
+        this.cIAddr = msg.cIAddr.clone();
+        this.yIAddr = msg.yIAddr.clone();
+        this.sIAddr = msg.sIAddr.clone();
+        this.gIAddr = msg.gIAddr.clone();
+        this.cHAddr = msg.cHAddr.clone();
+        this.sName = msg.sName.clone();
+        this.file = msg.file.clone();
+        this.options = new DHCPOptions(msg.options);
+    }
+
 
     public DHCPMessage(byte[] data) {
         cIAddr = new byte[4];
@@ -89,14 +105,14 @@ public class DHCPMessage {
         file = new byte[128];
         options = new DHCPOptions();
 
-        this.hops = data[0];
+        this.op = data[0];
         this.hType = data[1];
         this.hLen = data[2];
         this.hops = data[3];
 
-        this.xid = bytestoint(Arrays.copyOfRange(data, 4, 8));
-        this.secs = bytestoshort(Arrays.copyOfRange(data, 8, 10));
-        this.flags = bytestoshort(Arrays.copyOfRange(data, 10, 12));
+        this.xid = Utils.bytesToInt(Arrays.copyOfRange(data, 4, 8));
+        this.secs = Utils.bytesToShort(Arrays.copyOfRange(data, 8, 10));
+        this.flags = Utils.bytesToShort(Arrays.copyOfRange(data, 10, 12));
 
         this.cIAddr = Arrays.copyOfRange(data, 12, 16);
         this.yIAddr = Arrays.copyOfRange(data, 16, 20);
@@ -106,77 +122,119 @@ public class DHCPMessage {
         this.sName = Arrays.copyOfRange(data, 44, 108);
         this.file = Arrays.copyOfRange(data, 108, 236);
 
-        this.options = new DHCPOptions(Arrays.copyOfRange(data, 236, data.length - 1));
-
-        this.printMessage();
+        this.options = new DHCPOptions(Arrays.copyOfRange(data, 236, data.length));
     }
 
-    public byte[] discoverMsg(byte[] cMacAddress) {
-        op = DHCPREQUEST;
-        hType = ETHERNET10MB; // (0x1) 10Mb Ethernet
-        hLen = 6; // (0x6)
-        hops = 0; // (0x0)
-        xid = 556223005; // (0x21274A1D)
-        secs = 0;  // (0x0)
-        flags = 0; // (0x0)
+    public DHCPMessage createDiscoverMsg(byte[] cMacAddress, byte[] hostName, byte[] requestIP) {
+        DHCPMessage discoverMsg = new DHCPMessage(this);
+        discoverMsg.op = DHCPREQUEST;
+        discoverMsg.hType = ETHERNET10MB; // (0x1) 10Mb Ethernet
+        discoverMsg.hLen = 6; // (0x6)
+        discoverMsg.hops = 0; // (0x0)
+        discoverMsg.xid = 556223005; // (0x21274A1D)
+        discoverMsg.secs = 0;  // (0x0)
+        discoverMsg.flags = 0; // (0x0)
         // DHCP: 0............... = No Broadcast
 
-        Arrays.fill(cIAddr, (byte) 0);
-        Arrays.fill(yIAddr, (byte) 0);
-        Arrays.fill(sIAddr, (byte) 0);
-        Arrays.fill(gIAddr, (byte) 0);
-        Arrays.fill(cHAddr, (byte) 0);
-        for(int i = 0; i < cMacAddress.length; i++)
-            cHAddr[i] = cMacAddress[i];
+        Arrays.fill(discoverMsg.cIAddr, (byte) 0);
+        Arrays.fill(discoverMsg.yIAddr, (byte) 0);
+        Arrays.fill(discoverMsg.sIAddr, (byte) 0);
+        Arrays.fill(discoverMsg.gIAddr, (byte) 0);
+        Arrays.fill(discoverMsg.cHAddr, (byte) 0);
+        System.arraycopy(cMacAddress, 0, discoverMsg.cHAddr, 0, cMacAddress.length);
 
-        System.out.print("MAC Address: ");
-        for (int i = 0; i < cHAddr.length; i++) {
-            System.out.format("%02X%s", cHAddr[i], (i < cHAddr.length - 1) ? ":"
-                    : "");
-        }
-        System.out.println();
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPDISCOVER;
+        discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_HOST_NAME, hostName);
+        discoverMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_REQUEST_IP, requestIP);
 
-        byte[] dhcpMessage = new byte[1];
-        dhcpMessage[0] = DHCPOptions.DHCPACK;
-        options.putOptionData(DHCPOptions.DHCPMESSAGETYPE, dhcpMessage);
-        // DHCP: Magic Cookie = [OK]
-        // DHCP: Option Field (options)
-        // DHCP: DHCP Message Type = DHCP Discover
-        // DHCP: Client-identifier = (Type: 1) 08 00 2b 2e d8 5e
-        // DHCP: Host Name = JUMBO-WS
-        // DHCP: Parameter Request List = (Length: 7) 01 0f 03 2c 2e 2f 06
-        // DHCP: End of this option field
-
-        return this.externalize();
+        return discoverMsg;
     }
 
-    public byte[] offerMsg(byte[] offerYIAddr, byte[] serverId, byte[] timeLease, byte[] subnetMask, byte[] router, byte[] dns) {
-        op = DHCPREPLY;
-        for(int i = 0; i < offerYIAddr.length; i++)
-            yIAddr[i] = offerYIAddr[i];
+    public DHCPMessage createOfferMsg(byte[] offerYIAddr, byte[] serverId, byte[] timeLease,
+                                      byte[] subnetMask, byte[] router, byte[] dns) {
+        DHCPMessage offerMsg = new DHCPMessage(this);
+        offerMsg.op = DHCPREPLY;
+        System.arraycopy(offerYIAddr, 0, offerMsg.yIAddr, 0, offerYIAddr.length);
 
-        byte[] dhcpMessage = new byte[1];
-        dhcpMessage[0] = DHCPOptions.DHCPOFFER;
-        options.putOptionData(DHCPOptions.DHCPMESSAGETYPE, dhcpMessage);
-        options.putOptionData(DHCPOptions.DHCP_MSG_SERVER_ID, serverId);
-        options.putOptionData(DHCPOptions.DHCP_MSG_TIMELEASE, timeLease);
-        options.putOptionData(DHCPOptions.DHCP_MSG_SUBNET_MASK, subnetMask);
-        options.putOptionData(DHCPOptions.DHCP_MSG_ROUTER, router);
-        options.putOptionData(DHCPOptions.DHCP_MSG_DNS, dns);
-        // DHCP: Magic Cookie = [OK]
-        // DHCP: Option Field (options)
-        // DHCP: DHCP Message Type = DHCP Discover
-        // DHCP: Client-identifier = (Type: 1) 08 00 2b 2e d8 5e
-        // DHCP: Host Name = JUMBO-WS
-        // DHCP: Parameter Request List = (Length: 7) 01 0f 03 2c 2e 2f 06
-        // DHCP: End of this option field
+        offerMsg.options.reset();
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPOFFER;
+        offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_SERVER_ID, serverId);
+        offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_TIMELEASE, timeLease);
+        offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_SUBNET_MASK, subnetMask);
+        offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_ROUTER, router);
+        offerMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_DNS, dns);
 
-        return this.externalize();
+        return offerMsg;
+    }
+
+    public DHCPMessage createRequestMsg(byte[] requestIPAddr, byte[] serverId, byte[] timeLease, byte[] hostName) {
+        DHCPMessage requestMsg = new DHCPMessage(this);
+        requestMsg.op = DHCPREQUEST;
+
+        requestMsg.options.reset();
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPREQUEST;
+        requestMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        requestMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_REQUEST_IP, requestIPAddr);
+        requestMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_SERVER_ID, serverId);
+        requestMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_TIMELEASE, timeLease);
+        requestMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_HOST_NAME, hostName);
+
+        return requestMsg;
+    }
+
+    public DHCPMessage createACKMsg(byte[] subnetMask, byte[] router, byte[] dns) {
+        DHCPMessage ackMsg = new DHCPMessage(this);
+        ackMsg.op = DHCPREPLY;
+
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPACK;
+        ackMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        ackMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_SUBNET_MASK, subnetMask);
+        ackMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_ROUTER, router);
+        ackMsg.options.putOptionData(DHCPOptions.DHCP_OPTION_DNS, dns);
+
+        return ackMsg;
+    }
+
+    public DHCPMessage createNAKMsg(byte[] subnetMask, byte[] router, byte[] dns) {
+        DHCPMessage nakMsg = new DHCPMessage(this);
+        nakMsg.op = DHCPREPLY;
+
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPNAK;
+        nakMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        return nakMsg;
+    }
+
+    public DHCPMessage createDECLINEMsg(byte[] subnetMask, byte[] router, byte[] dns) {
+        DHCPMessage declineMsg = new DHCPMessage(this);
+        declineMsg.op = DHCPREQUEST;
+
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPDECLINE;
+        declineMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        return declineMsg;
+    }
+
+    public DHCPMessage createRELEASEMsg(byte[] subnetMask, byte[] router, byte[] dns) {
+        DHCPMessage releaseMsg = new DHCPMessage(this);
+        releaseMsg.op = DHCPREQUEST;
+
+        byte[] dhcpOptions_msgType = new byte[1];
+        dhcpOptions_msgType[0] = DHCPOptions.DHCPRELEASE;
+        releaseMsg.options.putOptionData(DHCPOptions.DHCP_OPTIONS_MESSAGE_TYPE, dhcpOptions_msgType);
+        return releaseMsg;
     }
 
     /**
      * Converts a DHCPMessage object to a byte array.
-     * @return  a byte array with information from DHCPMessage object.
+     *
+     * @return a byte array with information from DHCPMessage object.
      */
     public byte[] externalize() {
         int staticSize = 236;
@@ -192,19 +250,19 @@ public class DHCPMessage {
         msg[3] = this.hops;
 
         //add multibytes
-        for (int i=0; i < 4; i++) msg[4+i] = inttobytes(xid)[i];
-        for (int i=0; i < 2; i++) msg[8+i] = shorttobytes(secs)[i];
-        for (int i=0; i < 2; i++) msg[10+i] = shorttobytes(flags)[i];
-        for (int i=0; i < 4; i++) msg[12+i] = cIAddr[i];
-        for (int i=0; i < 4; i++) msg[16+i] = yIAddr[i];
-        for (int i=0; i < 4; i++) msg[20+i] = sIAddr[i];
-        for (int i=0; i < 4; i++) msg[24+i] = gIAddr[i];
-        for (int i=0; i < cHAddr.length; i++) msg[28+i] = cHAddr[i];
-        for (int i=0; i < 64; i++) msg[44+i] = sName[i];
-        for (int i=0; i < 128; i++) msg[108+i] = file[i];
+        for (int i = 0; i < 4; i++) msg[4 + i] = Utils.intToBytes(xid)[i];
+        for (int i = 0; i < 2; i++) msg[8 + i] = Utils.shortToByte(secs)[i];
+        for (int i = 0; i < 2; i++) msg[10 + i] = Utils.shortToByte(flags)[i];
+        for (int i = 0; i < 4; i++) msg[12 + i] = cIAddr[i];
+        for (int i = 0; i < 4; i++) msg[16 + i] = yIAddr[i];
+        for (int i = 0; i < 4; i++) msg[20 + i] = sIAddr[i];
+        for (int i = 0; i < 4; i++) msg[24 + i] = gIAddr[i];
+        for (int i = 0; i < cHAddr.length; i++) msg[28 + i] = cHAddr[i];
+        for (int i = 0; i < 64; i++) msg[44 + i] = sName[i];
+        for (int i = 0; i < 128; i++) msg[108 + i] = file[i];
 
         //add options
-        for (int i=0; i < options.length; i++) msg[staticSize+i] = options[i];
+        for (int i = 0; i < options.length; i++) msg[staticSize + i] = options[i];
 
         return msg;
     }
@@ -321,8 +379,8 @@ public class DHCPMessage {
         this.file = file;
     }
 
-    public byte[] getOptions() {
-        return options.externalize();
+    public DHCPOptions getOptions() {
+        return options;
     }
 
     //no set options yet...
@@ -338,54 +396,24 @@ public class DHCPMessage {
     public String toString() {
         String msg = new String();
 
-        msg += "Operation Code: " + this.op + "\n";
-        msg += "Hardware Type: " + this.hType  + "\n";
-        msg += "Hardware Length: " + this.hLen  + "\n";
+        msg += "Operation Code: " + (this.op == 1 ? "Request(1)" : "Reply(2)") + "\n";
+        msg += "Hardware Type: " + this.hType + "\n";
+        msg += "Hardware Length: " + this.hLen + "\n";
         msg += "Hops: " + this.hops + "\n";
 
-        msg += Integer.toString(xid) + "\n";
-        msg += Short.toString(secs) + "\n";
-        msg += Short.toString(flags) + "\n";
-        msg += cIAddr.toString() + "\n";
-        msg += yIAddr.toString() + "\n";
-        msg += sIAddr.toString() + "\n";
-        msg += gIAddr.toString() + "\n";
-        msg += cHAddr.toString() + "\n";
-        msg += sName.toString() + "\n";
-        msg += file.toString() + "\n";
+        msg += "xID: " + Integer.toString(xid) + "\n";
+        msg += "Secs: " + Short.toString(secs) + "\n";
+        msg += "Flag: " + Short.toString(flags) + "\n";
+        msg += "Client IP Adress: " + Utils.ipToString(cIAddr) + "\n";
+        msg += "Your Ip Adress: " + Utils.ipToString(yIAddr) + "\n";
+        msg += "Server IP Adress: " + Utils.ipToString(sIAddr) + "\n";
+        msg += "Gateway IP Adress: " + Utils.ipToString(gIAddr) + "\n";
+        msg += "Client Hardward Adress: " + Utils.macToString(cHAddr) + "\n";
+        msg += "Server Name: " + new String(sName).trim() + "\n";
+        msg += "Boot File Path: " + new String(file).trim() + "\n";
 
         msg += options.toString() + "\n";
 
-        //add options
-        assert(file != null);
-        assert (options != null);
-        //msg += options.toString();
-
-        //return super.toString();
         return msg;
-    }
-
-    private byte[] inttobytes(int i){
-        byte[] dword = new byte[4];
-        dword[0] = (byte) ((i >> 24) & 0x000000FF);
-        dword[1] = (byte) ((i >> 16) & 0x000000FF);
-        dword[2] = (byte) ((i >> 8) & 0x000000FF);
-        dword[3] = (byte) (i & 0x00FF);
-        return dword;
-    }
-
-    private int bytestoint(byte[] data) {
-        return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
-    }
-
-    private byte[] shorttobytes(short i){
-        byte[] b = new byte[2];
-        b[0] = (byte) ((i >> 8) & 0x000000FF);
-        b[1] = (byte) (i & 0x00FF);
-        return b;
-    }
-
-    private short bytestoshort(byte[] data) {
-        return (short) (data[0] << 8 | data[1]);
     }
 }
